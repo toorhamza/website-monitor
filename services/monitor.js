@@ -2,8 +2,6 @@ const axios = require("axios").default;
 const cheerio = require("cheerio");
 const logger = require("../utils/logger");
 
-const loggerInstance = logger();
-
 axios.interceptors.request.use((x) => {
   x.meta = x.meta || {};
   x.meta.requestStartedAt = new Date().getTime();
@@ -12,45 +10,65 @@ axios.interceptors.request.use((x) => {
 
 axios.interceptors.response.use(
   (x) => {
-    loggerInstance.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
+    logger.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
     return x;
   },
   (x) => {
-    loggerInstance.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
+    logger.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
     throw x;
   }
 );
 
 async function monitorService(url, title) {
-  console.log("running monitor service")
+  logger.log(`Checking ${url} for Title: ${title}`);
+
   const status = await pingWebsite(url);
 
-  if (!status) {
-    loggerInstance.log("Website connection error so skipping next checks");
+  if (!status || !status.statusCode) {
+    logger.log(`Website connection/dns error with message: ${status.statusMessage}`);
     return;
   }
 
-  const $ = cheerio.load(status.data);
-  const webPageTitle = $("title").text();
+  logger.log(`StatusCode: ${status.statusCode}, Message: ${status.statusMessage}`);
 
-  if (webPageTitle !== title) loggerInstance.log("Title does not match");
+  if (!status.data) {
+    logger.log(`Website returned an error status code or did not returned valid HTML data so skipping title checks`);
+    return;
+  }
+
+  const titleCheck = checkTitle(title, status.data);
 }
 
 async function pingWebsite(url) {
   try {
     const response = await axios.get(url);
-    const { statusCode, data } = response;
+    const statusCode = response.status;
+    const statusMessage = response.statusText;
+    const data = response.data;
 
-    return { statusCode, data };
+    return { statusCode, statusMessage, data };
   } catch (error) {
     if (error.response) {
-      loggerInstance.log(`Status Code: ${error.response.status}, Error Message: ${error.message}`);
+      return { statusCode: error.response.status, statusMessage: error.message };
     } else {
-      loggerInstance.log("Error Message:", error.message);
+      return { statusMessage: error.message };
     }
-    return null;
   }
 }
 
-//module.exports = monitorService;
-monitorService("https://www.google.com")
+function checkTitle(title, data) {
+  const $ = cheerio.load(data);
+  const webPageTitle = $("title").text();
+
+  logger.log(`Title expected: ${title}, Title Received: ${webPageTitle}`);
+
+  if (webPageTitle !== title) {
+    logger.log("Error: Title does not match");
+    return false;
+  } else if (webPageTitle === title) {
+    logger.log("Congratulations! Title Matched");
+    return true;
+  }
+}
+
+module.exports = { monitorService };
