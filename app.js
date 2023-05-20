@@ -4,5 +4,9 @@ const cronExpressions = require("./config/cronExpressions.json");
 const scheduleCronJob = require("./services/schedule");
 
 for (const website of websites) {
-  scheduleCronJob(website, cronExpressions[website.interval]);
+  try {
+    scheduleCronJob(website, cronExpressions[website.interval]);
+  } catch (e) {
+    console.log("Error occured");
+  }
 }
