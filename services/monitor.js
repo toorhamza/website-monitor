@@ -1,5 +1,8 @@
 const axios = require("axios").default;
 const cheerio = require("cheerio");
+const logger = require("../utils/logger");
+
+const loggerInstance = logger();
 
 axios.interceptors.request.use((x) => {
   x.meta = x.meta || {};
@@ -9,27 +12,28 @@ axios.interceptors.request.use((x) => {
 
 axios.interceptors.response.use(
   (x) => {
-    console.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
+    loggerInstance.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
     return x;
   },
   (x) => {
-    console.error(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
+    loggerInstance.log(`Execution time for: ${x.config.url} - ${new Date().getTime() - x.config.meta.requestStartedAt} ms`);
     throw x;
   }
 );
 
-async function monitorService(url) {
+async function monitorService(url, title) {
+  console.log("running monitor service")
   const status = await pingWebsite(url);
 
   if (!status) {
-    console.log("website error so skipping next checks");
+    loggerInstance.log("Website connection error so skipping next checks");
     return;
   }
 
   const $ = cheerio.load(status.data);
-  const title = $("title").text();
+  const webPageTitle = $("title").text();
 
-  console.log(title);
+  if (webPageTitle !== title) loggerInstance.log("Title does not match");
 }
 
 async function pingWebsite(url) {
@@ -40,12 +44,13 @@ async function pingWebsite(url) {
     return { statusCode, data };
   } catch (error) {
     if (error.response) {
-      console.error(`Status Code: ${error.response.status}, Error Message: ${error.message}`);
+      loggerInstance.log(`Status Code: ${error.response.status}, Error Message: ${error.message}`);
     } else {
-      console.error("Error Message:", error.message);
+      loggerInstance.log("Error Message:", error.message);
     }
     return null;
   }
 }
 
-monitorService("https://www.bing.com");
+//module.exports = monitorService;
+monitorService("https://www.google.com")
