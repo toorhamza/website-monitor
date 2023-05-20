@@ -1,0 +1,10 @@
+[
+  {
+    "url": "https://www.google.com",
+    "interval": "1m"
+  },
+  {
+    "url": "https://www.bing.com/",
+    "interval": "5m"
+  }
+]
