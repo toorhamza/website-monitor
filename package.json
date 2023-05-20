@@ -4,7 +4,8 @@
   "description": "monitor websites uptime",
   "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "format": "prettier --write ."
   },
   "author": "",
   "license": "ISC",
@@ -12,5 +13,8 @@
     "axios": "^1.4.0",
     "cheerio": "^1.0.0-rc.12",
     "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8"
   }
 }
